@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { findUserByEmail, updateUserLogin } = require('../../lib/models/User');
+const { recordLoginLog } = require('../../lib/models/ChatLog');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -60,6 +61,14 @@ module.exports = async function handler(req, res) {
     const userAgent = req.headers['user-agent'] || 'Unknown';
 
     await updateUserLogin(normEmail, { ip, userAgent });
+    await recordLoginLog({
+      userEmail: normEmail,
+      userName: user.name,
+      branch: user.branch || '',
+      year: user.year || '',
+      ip,
+      userAgent
+    });
 
     return res.status(200).json({
       success: true,

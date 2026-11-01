@@ -315,31 +315,36 @@
 <div class="admin-panel" id="admin-panel">
   <div class="admin-header">
     <div>
-      <div class="admin-title">&#128101; Registered Users Database</div>
-      <div style="font-size:.72rem;color:var(--text-sub);margin-top:2px;">Live database signups &amp; logins</div>
+      <div class="admin-title">&#128101; Database &amp; User Intelligence</div>
+      <div style="font-size:.72rem;color:var(--text-sub);margin-top:2px;">Live user signups &amp; search queries</div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button class="admin-export-btn" onclick="exportUsersCSV()" title="Download CSV">📥 Export CSV</button>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button class="admin-export-btn" id="admin-export-btn" onclick="exportAdminData()" title="Download CSV">📥 Export CSV</button>
       <button class="admin-close" onclick="closeAdminPanel()">&#10005;</button>
     </div>
   </div>
 
+  <div class="tab-row" style="margin:10px 16px 0;background:rgba(0,0,0,0.2);">
+    <button class="tab-btn active" id="admin-tab-users" onclick="switchAdminTab('users')">👥 Users (<span id="tab-count-users">0</span>)</button>
+    <button class="tab-btn" id="admin-tab-searches" onclick="switchAdminTab('searches')">🔍 Search Queries (<span id="tab-count-searches">0</span>)</button>
+  </div>
+
   <div class="admin-stats">
     <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Users</div></div>
-    <div class="stat-card"><div class="stat-num" id="stat-today">0</div><div class="stat-label">Joined Today</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-searches">0</div><div class="stat-label">Total Searches</div></div>
     <div class="stat-card"><div class="stat-num" id="stat-active">0</div><div class="stat-label">Active Logins</div></div>
   </div>
 
   <div class="admin-search">
-    <input type="text" id="admin-search-input" placeholder="Search by name, email, branch..." oninput="filterUsers(this.value)">
+    <input type="text" id="admin-search-input" placeholder="Search by name, email, query text..." oninput="filterAdminContent(this.value)">
   </div>
 
   <div class="admin-list" id="admin-list">
-    <div style="text-align:center;padding:30px;color:var(--text-sub);">Loading registered users from database...</div>
+    <div style="text-align:center;padding:30px;color:var(--text-sub);">Loading data from database...</div>
   </div>
 
   <div class="admin-footer">
-    🔒 Database Connected &bull; Real-time signup records stored on MongoDB Atlas / Vercel
+    🔒 Database Connected &bull; Real-time user signups &amp; queries tracked
   </div>
 </div>
 

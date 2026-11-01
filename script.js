@@ -471,7 +471,11 @@ async function fetchBotResponse(prompt) {
       body: JSON.stringify({
         message: prompt,
         clientApiKey: customKey || undefined,
-        userEmail: state.user?.email
+        userEmail: state.user?.email || 'guest',
+        userName: state.user?.name || 'Guest User',
+        userBranch: state.user?.branch || 'N/A',
+        userYear: state.user?.year || 'N/A',
+        sessionId: state.sessionId
       })
     });
 
@@ -795,7 +799,7 @@ async function openAdminPanel() {
   }
   document.getElementById('admin-panel').classList.add('open');
   document.getElementById('backdrop').classList.add('show');
-  await fetchAndRenderAdminUsers();
+  await fetchAndRenderAdminData();
 }
 
 function closeAdminPanel() {
@@ -803,10 +807,19 @@ function closeAdminPanel() {
   document.getElementById('backdrop').classList.remove('show');
 }
 
-async function fetchAndRenderAdminUsers(filter = '') {
+function switchAdminTab(tab) {
+  state.adminActiveTab = tab;
+  document.getElementById('admin-tab-users').classList.toggle('active', tab === 'users');
+  document.getElementById('admin-tab-searches').classList.toggle('active', tab === 'searches');
+  const input = document.getElementById('admin-search-input');
+  input.placeholder = tab === 'users' ? 'Search by name, email, branch...' : 'Search queries by keyword, email, name...';
+  renderAdminContent(input.value);
+}
+
+async function fetchAndRenderAdminData(filter = '') {
   const listEl = document.getElementById('admin-list');
   if (!filter && state.cachedAdminUsers.length === 0) {
-    listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-sub);">Loading registered users from database...</div>';
+    listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-sub);">Loading data from database...</div>';
   }
 
   try {
@@ -814,20 +827,32 @@ async function fetchAndRenderAdminUsers(filter = '') {
     if (res.ok) {
       const data = await res.json();
       state.cachedAdminUsers = data.users || [];
+      state.cachedAdminSearches = data.searchLogs || [];
+
       document.getElementById('stat-total').textContent = data.stats?.totalUsers || state.cachedAdminUsers.length;
-      document.getElementById('stat-today').textContent = data.stats?.joinedToday || 0;
+      document.getElementById('stat-searches').textContent = data.stats?.totalSearches || state.cachedAdminSearches.length;
       document.getElementById('stat-active').textContent = data.stats?.activeLogins || 0;
+      document.getElementById('tab-count-users').textContent = state.cachedAdminUsers.length;
+      document.getElementById('tab-count-searches').textContent = state.cachedAdminSearches.length;
     }
   } catch (err) {
     console.warn('Could not fetch /api/admin/users:', err);
   }
 
-  renderAdminUserList(filter);
+  renderAdminContent(filter);
+}
+
+function renderAdminContent(filter = '') {
+  if (state.adminActiveTab === 'searches') {
+    renderAdminSearches(filter);
+  } else {
+    renderAdminUserList(filter);
+  }
 }
 
 function renderAdminUserList(filter = '') {
   const el = document.getElementById('admin-list');
-  const allUsers = state.cachedAdminUsers;
+  const allUsers = state.cachedAdminUsers || [];
 
   const filtered = filter
     ? allUsers.filter(u =>
@@ -891,11 +916,61 @@ function renderAdminUserList(filter = '') {
   }).join('');
 }
 
-function filterUsers(val) {
-  renderAdminUserList(val);
+function renderAdminSearches(filter = '') {
+  const el = document.getElementById('admin-list');
+  const allSearches = state.cachedAdminSearches || [];
+
+  const filtered = filter
+    ? allSearches.filter(s =>
+        (s.query && s.query.toLowerCase().includes(filter.toLowerCase())) ||
+        (s.userEmail && s.userEmail.toLowerCase().includes(filter.toLowerCase())) ||
+        (s.userName && s.userName.toLowerCase().includes(filter.toLowerCase())) ||
+        (s.source && s.source.toLowerCase().includes(filter.toLowerCase()))
+      )
+    : allSearches;
+
+  if (!filtered.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-sub);">${filter ? 'No queries match filter.' : 'No user searches recorded in database yet.'}</div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(s => {
+    const time = s.createdAt
+      ? new Date(s.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : 'Just now';
+    const sourceTag = s.source === 'gemini_ai'
+      ? '<span style="font-size:.65rem;background:rgba(200,150,12,0.2);color:var(--gold-bright);border:1px solid rgba(200,150,12,0.4);padding:1px 6px;border-radius:4px;">✨ Gemini AI</span>'
+      : '<span style="font-size:.65rem;background:rgba(72,187,120,0.18);color:#68D391;border:1px solid rgba(72,187,120,0.3);padding:1px 6px;border-radius:4px;">🏛️ MMCOE KB</span>';
+
+    return `<div style="background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:.76rem;color:var(--gold-bright);font-weight:600;">${esc(s.userName || 'Guest')} (${esc(s.userEmail || 'guest')})</div>
+        <div style="font-size:.7rem;color:var(--text-sub);">${time}</div>
+      </div>
+      <div style="font-size:.88rem;color:var(--text-main);font-weight:500;margin-bottom:6px;word-break:break-word;">
+        💬 "${esc(s.query)}"
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:.72rem;color:var(--text-sub);">
+        <span>Branch: ${esc(s.userBranch || 'N/A')} &bull; ${esc(s.ip || 'Unknown')}</span>
+        ${sourceTag}
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// EXPORT USERS TO CSV
+function filterAdminContent(val) {
+  renderAdminContent(val);
+}
+
+// EXPORT TO CSV
+function exportAdminData() {
+  if (state.adminActiveTab === 'searches') {
+    exportSearchesCSV();
+  } else {
+    exportUsersCSV();
+  }
+}
+
 function exportUsersCSV() {
   if (!state.cachedAdminUsers || state.cachedAdminUsers.length === 0) {
     showToast('No user data to export');
@@ -915,15 +990,40 @@ function exportUsersCSV() {
     u.createdAt ? new Date(u.createdAt).toISOString() : ''
   ]);
 
+  downloadCSV(`mmcoe_users_${Date.now()}.csv`, headers, rows);
+  showToast('Users exported to CSV');
+}
+
+function exportSearchesCSV() {
+  if (!state.cachedAdminSearches || state.cachedAdminSearches.length === 0) {
+    showToast('No search query data to export');
+    return;
+  }
+  const headers = ['Timestamp', 'User Name', 'User Email', 'Branch', 'Year', 'Query Search', 'Response Source', 'IP Address'];
+  const rows = state.cachedAdminSearches.map(s => [
+    s.createdAt ? new Date(s.createdAt).toISOString() : '',
+    `"${(s.userName || '').replace(/"/g, '""')}"`,
+    `"${(s.userEmail || '').replace(/"/g, '""')}"`,
+    `"${(s.userBranch || '').replace(/"/g, '""')}"`,
+    `"${(s.userYear || '').replace(/"/g, '""')}"`,
+    `"${(s.query || '').replace(/"/g, '""')}"`,
+    s.source || '',
+    s.ip || ''
+  ]);
+
+  downloadCSV(`mmcoe_search_queries_${Date.now()}.csv`, headers, rows);
+  showToast('Search queries exported to CSV');
+}
+
+function downloadCSV(filename, headers, rows) {
   const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
-  link.setAttribute('download', `mmcoe_users_${Date.now()}.csv`);
+  link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  showToast('Users exported to CSV');
 }
 
 // Auto-restore session on page load

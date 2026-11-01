@@ -1,4 +1,5 @@
 const { getAllUsers } = require('../../lib/models/User');
+const { getAllQueryLogs, getAllLoginLogs } = require('../../lib/models/ChatLog');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -19,21 +20,26 @@ module.exports = async function handler(req, res) {
 
   try {
     const users = await getAllUsers();
+    const searchLogs = await getAllQueryLogs(300);
+    const loginLogs = await getAllLoginLogs(200);
 
-    // Summary calculations
     const today = new Date().toDateString();
     const totalUsers = users.length;
     const joinedToday = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString() === today).length;
     const activeLogins = users.filter(u => (u.loginCount || 0) > 1).length;
+    const totalSearches = searchLogs.length;
 
     return res.status(200).json({
       success: true,
       stats: {
         totalUsers,
         joinedToday,
-        activeLogins
+        activeLogins,
+        totalSearches
       },
-      users
+      users,
+      searchLogs,
+      loginLogs
     });
   } catch (error) {
     console.error('[Admin Users API Error]:', error);
