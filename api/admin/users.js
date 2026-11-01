@@ -1,5 +1,6 @@
 const { getAllUsers } = require('../../lib/models/User');
 const { getAllQueryLogs, getAllLoginLogs } = require('../../lib/models/ChatLog');
+const { connectToDatabase } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -29,8 +30,11 @@ module.exports = async function handler(req, res) {
     const activeLogins = users.filter(u => (u.loginCount || 0) > 1).length;
     const totalSearches = searchLogs.length;
 
+    const dbStatus = await connectToDatabase();
+
     return res.status(200).json({
       success: true,
+      databaseConnected: dbStatus.isConnected,
       stats: {
         totalUsers,
         joinedToday,

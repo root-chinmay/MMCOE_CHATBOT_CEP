@@ -359,6 +359,27 @@ async function handleRegister() {
       return;
     }
 
+    // Persist to local browser storage as well
+    try {
+      const localUsers = JSON.parse(localStorage.getItem('mmcoe_registered_users') || '[]');
+      const existingIdx = localUsers.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+      const userObj = {
+        _id: data.user?.id || 'usr_' + Date.now(),
+        name,
+        email,
+        branch,
+        year,
+        phone,
+        role: 'user',
+        signupIp: 'Local / Connected',
+        loginCount: 1,
+        createdAt: new Date().toISOString()
+      };
+      if (existingIdx >= 0) localUsers[existingIdx] = userObj;
+      else localUsers.unshift(userObj);
+      localStorage.setItem('mmcoe_registered_users', JSON.stringify(localUsers));
+    } catch (e) {}
+
     showAuthMsg('Account created and saved to database! Signing in...', 'success');
     setTimeout(() => loginUser(data.user), 800);
   } catch (err) {
@@ -515,6 +536,20 @@ async function sendMessage(textArg) {
 
   appendMessage('user', userText);
   state.messages.push({ role: 'user', content: userText });
+
+  try {
+    const localSearches = JSON.parse(localStorage.getItem('mmcoe_user_searches') || '[]');
+    localSearches.unshift({
+      userEmail: state.user?.email || 'guest',
+      userName: state.user?.name || 'Guest User',
+      userBranch: state.user?.branch || 'N/A',
+      userYear: state.user?.year || 'N/A',
+      query: userText,
+      source: 'live',
+      createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('mmcoe_user_searches', JSON.stringify(localSearches.slice(0, 150)));
+  } catch (e) {}
 
   if (state.isGuest) {
     state.guestMsgCount++;
@@ -822,21 +857,56 @@ async function fetchAndRenderAdminData(filter = '') {
     listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-sub);">Loading data from database...</div>';
   }
 
+  let dbConnected = false;
+
   try {
     const res = await fetch('/api/admin/users');
     if (res.ok) {
       const data = await res.json();
-      state.cachedAdminUsers = data.users || [];
-      state.cachedAdminSearches = data.searchLogs || [];
+      dbConnected = !!data.databaseConnected;
+      const backendUsers = data.users || [];
+      const backendSearches = data.searchLogs || [];
 
-      document.getElementById('stat-total').textContent = data.stats?.totalUsers || state.cachedAdminUsers.length;
-      document.getElementById('stat-searches').textContent = data.stats?.totalSearches || state.cachedAdminSearches.length;
-      document.getElementById('stat-active').textContent = data.stats?.activeLogins || 0;
+      // Merge backend users with local browser signups
+      const localUsers = JSON.parse(localStorage.getItem('mmcoe_registered_users') || '[]');
+      const userMap = new Map();
+      backendUsers.forEach(u => userMap.set((u.email || '').toLowerCase(), u));
+      localUsers.forEach(u => {
+        const k = (u.email || '').toLowerCase();
+        if (!userMap.has(k)) userMap.set(k, u);
+      });
+      state.cachedAdminUsers = Array.from(userMap.values());
+
+      // Merge backend searches with local browser searches
+      const localSearches = JSON.parse(localStorage.getItem('mmcoe_user_searches') || '[]');
+      state.cachedAdminSearches = [...backendSearches, ...localSearches];
+
+      document.getElementById('stat-total').textContent = state.cachedAdminUsers.length;
+      document.getElementById('stat-searches').textContent = state.cachedAdminSearches.length;
+      document.getElementById('stat-active').textContent = data.stats?.activeLogins || state.cachedAdminUsers.filter(u => (u.loginCount || 0) > 1).length;
       document.getElementById('tab-count-users').textContent = state.cachedAdminUsers.length;
       document.getElementById('tab-count-searches').textContent = state.cachedAdminSearches.length;
     }
   } catch (err) {
-    console.warn('Could not fetch /api/admin/users:', err);
+    console.warn('Could not fetch /api/admin/users, loading local records:', err);
+    state.cachedAdminUsers = JSON.parse(localStorage.getItem('mmcoe_registered_users') || '[]');
+    state.cachedAdminSearches = JSON.parse(localStorage.getItem('mmcoe_user_searches') || '[]');
+    document.getElementById('stat-total').textContent = state.cachedAdminUsers.length;
+    document.getElementById('stat-searches').textContent = state.cachedAdminSearches.length;
+  }
+
+  // Update Database Connection Status Pill
+  const statusEl = document.getElementById('admin-db-status');
+  if (statusEl) {
+    if (dbConnected) {
+      statusEl.innerHTML = '<span style="color:#68D391;font-weight:700;">🟢 MongoDB Atlas Cloud Active</span> &bull; All signups &amp; queries synced across all devices.';
+      statusEl.style.background = 'rgba(56,161,105,0.12)';
+      statusEl.style.border = '1px solid rgba(56,161,105,0.3)';
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--gold-bright);font-weight:700;">⚠️ Ephemeral / Local Mode</span> &bull; Signups synced locally in browser. Add <code>MONGODB_URI</code> in Vercel to store permanently across all devices.';
+      statusEl.style.background = 'rgba(200,150,12,0.12)';
+      statusEl.style.border = '1px solid rgba(200,150,12,0.3)';
+    }
   }
 
   renderAdminContent(filter);
