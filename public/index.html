@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" href="/mmcoelogo.png">
+  <link rel="shortcut icon" href="/mmcoelogo.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MMCOE AI ChatBot with Backend, Database, Authentication, and Gemini AI. Provides verified faculty rosters, admissions, fees, placements, and general AI capabilities for MMCOE Pune.">
+  <title>MMCOE - AI ChatBot &amp; Assistant</title>
+  <meta name="keywords" content="MMCOE, MMCOE Pune, MMCOE AI, MMCOE chatbot, MMCOE ChatBot, MMCOE AI ChatBot, MMCOE admissions, MMCOE departments, MMCOE faculty">
+  <link rel="canonical" href="https://mmcoechatbot.vercel.app/">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .gemini-pill {
+      font-size: .68rem;
+      background: linear-gradient(135deg, rgba(200,150,12,0.2), rgba(245,184,0,0.3));
+      border: 1px solid rgba(200,150,12,0.4);
+      color: var(--gold-bright);
+      padding: 3px 9px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+    }
+    .admin-export-btn {
+      background: rgba(200,150,12,0.18);
+      border: 1px solid rgba(200,150,12,0.4);
+      color: var(--gold-bright);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: .78rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .admin-export-btn:hover {
+      background: var(--gold);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<button class="auth-theme-btn" id="auth-theme-btn" onclick="toggleTheme()" title="Toggle theme">
+  <span class="sun">☀️</span>
+  <span class="moon">🌙</span>
+</button>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+<div id="app">
+
+  <!-- AUTHENTICATION SCREEN -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-card" style="max-width: 520px;">
+      <div class="logo-wrap">
+        <div class="logo-shield">&#127891;</div>
+        <div class="brand-name">MMCOE AI ChatBot</div>
+        <div class="brand-sub">Marathwada Mitra Mandal's College of Engineering, Pune</div>
+        <div style="margin-top:6px;"><span class="gemini-pill">✨ Cloud Database &amp; Gemini AI Enabled</span></div>
+      </div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" onclick="switchTab('register')">Create Account</button>
+      </div>
+      <div id="auth-msg"></div>
+
+      <!-- LOGIN FORM -->
+      <div id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="login-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="login-pass" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In &rarr;</button>
+        <div class="skip-link" style="margin-top:14px;">
+          <a href="#" onclick="guestLogin();return false;">Continue as Guest (5 free messages)</a>
+        </div>
+      </div>
+
+      <!-- REGISTRATION FORM (Captures all student/user details into Database) -->
+      <div id="register-form" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" id="reg-name" placeholder="e.g. Chinmay Amodkar" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="reg-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="reg-pass" placeholder="Min. 6 characters" autocomplete="new-password">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Branch / Department</label>
+            <select class="form-input" id="reg-branch" style="background:var(--input-bg);color:var(--text-main);cursor:pointer;">
+              <option value="Computer Engineering">Computer Engg</option>
+              <option value="Information Technology">Information Tech</option>
+              <option value="AI & Data Science">AI &amp; Data Science</option>
+              <option value="Electronics & Telecom">E&amp;TC Engg</option>
+              <option value="Electrical Engineering">Electrical Engg</option>
+              <option value="Mechanical Engineering">Mechanical Engg</option>
+              <option value="MBA">MBA</option>
+              <option value="General / Aspirant">Aspirant / Visitor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Year of Study</label>
+            <select class="form-input" id="reg-year" style="background:var(--input-bg);color:var(--text-main);cursor:pointer;">
+              <option value="First Year (FE)">First Year (FE)</option>
+              <option value="Second Year (SE)">Second Year (SE)</option>
+              <option value="Third Year (TE)">Third Year (TE)</option>
+              <option value="Final Year (BE)">Final Year (BE)</option>
+              <option value="MBA Student">MBA Student</option>
+              <option value="Alumni">Alumni</option>
+              <option value="Prospective Student">Prospective Student</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mobile Number (Optional)</label>
+          <input type="tel" class="form-input" id="reg-phone" placeholder="e.g. 9876543210" autocomplete="tel">
+        </div>
+
+        <button class="btn-primary" id="reg-btn" onclick="handleRegister()">Create Account &rarr;</button>
+        <div style="font-size:.73rem;color:var(--text-sub);text-align:center;margin-top:10px;">
+          🔒 All signup details are securely persisted to the connected database.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div id="chat-screen" class="screen">
+    <div class="chat-layout">
+      <!-- SIDEBAR -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">&#127891;</div>
+          <div>
+            <div class="sidebar-title">MMCOE AI</div>
+            <div class="sidebar-sub"><span class="gemini-pill" style="font-size:.6rem;padding:2px 6px;">Gemini 1.5 Flash</span></div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">QUICK ACCESS</div>
+          <button class="nav-item" onclick="sendQuick('about')"><span class="nav-icon">&#127963;&#65039;</span><span class="nav-label">About MMCOE</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty')"><span class="nav-icon">👨‍🏫</span><span class="nav-label">Faculty &amp; HODs</span></button>
+          <button class="nav-item" onclick="sendQuick('courses')"><span class="nav-icon">&#128218;</span><span class="nav-label">Courses &amp; Intake</span></button>
+          <button class="nav-item" onclick="sendQuick('fees')"><span class="nav-icon">&#128176;</span><span class="nav-label">Fee Structure</span></button>
+          <button class="nav-item" onclick="sendQuick('cutoff')"><span class="nav-icon">📊</span><span class="nav-label">Cutoff Marks</span></button>
+          <button class="nav-item" onclick="sendQuick('admission')"><span class="nav-icon">&#128203;</span><span class="nav-label">Admissions (CAP)</span></button>
+          <button class="nav-item" onclick="sendQuick('placements')"><span class="nav-icon">&#128188;</span><span class="nav-label">Placements</span></button>
+          <button class="nav-item" onclick="sendQuick('scholarships')"><span class="nav-icon">&#127942;</span><span class="nav-label">Scholarships</span></button>
+          <button class="nav-item" onclick="sendQuick('hostel')"><span class="nav-icon">🏡</span><span class="nav-label">Hostel &amp; Mess</span></button>
+          <button class="nav-item" onclick="sendQuick('facilities')"><span class="nav-icon">&#127968;</span><span class="nav-label">Campus Facilities</span></button>
+          <button class="nav-item" onclick="sendQuick('events')"><span class="nav-icon">🎉</span><span class="nav-label">Clubs &amp; Fests</span></button>
+          <button class="nav-item" onclick="sendQuick('contact')"><span class="nav-icon">&#128205;</span><span class="nav-label">Contact &amp; Location</span></button>
+
+          <div class="nav-section-title" style="margin-top:10px;">DEPARTMENT FACULTY</div>
+          <button class="nav-item" onclick="sendQuick('faculty_comp')"><span class="nav-icon">💻</span><span class="nav-label">Computer Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_it')"><span class="nav-icon">🖥️</span><span class="nav-label">IT Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_aids')"><span class="nav-icon">🤖</span><span class="nav-label">AI &amp; DS Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_entc')"><span class="nav-icon">📡</span><span class="nav-label">E&amp;TC Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_mech')"><span class="nav-icon">⚙️</span><span class="nav-label">Mechanical Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_elect')"><span class="nav-icon">⚡</span><span class="nav-label">Electrical Faculty</span></button>
+          <button class="nav-item" onclick="sendQuick('faculty_fe')"><span class="nav-icon">📐</span><span class="nav-label">First Year Faculty</span></button>
+
+          <div class="nav-section-title" style="margin-top:10px;">CHAT HISTORY</div>
+          <div id="sidebar-history" class="history-list"></div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-chip">
+            <div class="user-avatar" id="nav-avatar">G</div>
+            <div>
+              <div class="user-name" id="nav-name">Guest User</div>
+              <div class="user-email" id="nav-email">guest mode</div>
+            </div>
+          </div>
+          <button class="nav-item" style="margin-top:6px;color:#e53e3e;" onclick="logout()">
+            <span class="nav-icon">&#128682;</span>
+            <span class="nav-label">Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- MAIN CHAT AREA -->
+      <main class="chat-main">
+        <div class="chat-topbar">
+          <button class="mob-menu-btn" onclick="toggleMobileSidebar()">&#9776;</button>
+          <button class="topbar-toggle" onclick="toggleSidebar()">&#9776;</button>
+          <div class="topbar-info">
+            <div class="topbar-title">
+              <span class="status-dot"></span>MMCOE AI Assistant
+              <span class="gemini-pill" style="margin-left:8px;">✨ Gemini AI</span>
+            </div>
+            <div class="topbar-sub">Karve Nagar, Pune &bull; NAAC A++ Autonomous &bull; Code 06156</div>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-btn" onclick="openAdminPanel()" title="Database Users & Admin" id="admin-btn" style="display:none;">&#128101;</button>
+            <button class="icon-btn" onclick="openGeminiModal()" title="Gemini AI Settings">✨</button>
+            <button class="icon-btn" onclick="openHistory()" title="History">&#128336;</button>
+            <button class="icon-btn" onclick="newChat()" title="New Chat">&#9998;&#65039;</button>
+            <button class="icon-btn" onclick="clearChat()" title="Clear Chat">&#128465;&#65039;</button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+              <span class="sun">☀️</span>
+              <span class="moon">🌙</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="messages-area" id="messages-area">
+          <div id="welcome-banner" class="welcome-banner">
+            <div class="welcome-icon">&#127891;</div>
+            <div class="welcome-title">Welcome to MMCOE AI</div>
+            <div class="welcome-desc">
+              Your intelligent guide for <strong>Marathwada Mitra Mandal's College of Engineering</strong> — faculty rosters, admissions, cutoffs, placements, fees, and general AI answers powered by <strong>Google Gemini</strong>.
+            </div>
+            <div class="quick-chips">
+              <span class="chip" onclick="sendQuick('about')">&#127963;&#65039; About MMCOE</span>
+              <span class="chip" onclick="sendQuick('faculty')">👨‍🏫 Faculty &amp; HODs</span>
+              <span class="chip" onclick="sendQuick('courses')">&#128218; Branches &amp; Intake</span>
+              <span class="chip" onclick="sendQuick('fees')">&#128176; Fees Structure</span>
+              <span class="chip" onclick="sendQuick('cutoff')">📊 Cutoffs</span>
+              <span class="chip" onclick="sendQuick('placements')">&#128188; Placements</span>
+              <span class="chip" onclick="sendQuick('hostel')">🏡 Hostel</span>
+              <span class="chip" onclick="sendQuick('contact')">📞 Contact</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="suggestions">
+            <span class="suggestion-pill" onclick="sendQuick('faculty')">Faculty list</span>
+            <span class="suggestion-pill" onclick="sendQuick('cutoff')">Cutoff percentiles</span>
+            <span class="suggestion-pill" onclick="sendQuick('fees')">B.Tech fees</span>
+            <span class="suggestion-pill" onclick="sendQuick('placements')">Highest package</span>
+            <span class="suggestion-pill" onclick="sendQuick('hostel')">Hostel fee</span>
+            <span class="suggestion-pill" onclick="sendQuick('documents')">Required documents</span>
+            <span class="suggestion-pill" onclick="sendMessage('Write a Python function to check for prime numbers')">✨ Ask General Coding</span>
+          </div>
+
+          <div id="login-gate" style="display:none;" class="login-gate-msg">
+            <p>&#128272; You've used your 5 free guest messages. Sign in or create an account to enjoy unlimited chats!</p>
+            <button class="gate-btn" onclick="showAuth()">Sign In / Create Account</button>
+          </div>
+
+          <div class="input-row">
+            <textarea class="chat-input" id="chat-input" placeholder="Ask anything about MMCOE (e.g. computer faculty, cutoff, fees) or general queries..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">&#10148;</button>
+          </div>
+          <div class="input-hint">
+            <span class="status-dot"></span>Advanced MMCOE ChatBot by Chinmay Rajendra Amodkar &bull; Connected to Database &amp; Google Gemini AI
+          </div>
+          <div class="msg-count-bar" id="msg-count-bar" style="display:none;"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="modal-overlay" id="logout-modal">
+  <div class="modal-box">
+    <div class="modal-icon">&#128682;</div>
+    <div class="modal-title">Sign Out?</div>
+    <div class="modal-desc">Are you sure you want to sign out of your MMCOE ChatBot account?</div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeLogoutModal()">No, Stay</button>
+      <button class="modal-btn confirm" onclick="confirmLogout()">Yes, Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- GEMINI API SETTINGS MODAL -->
+<div class="modal-overlay" id="gemini-modal">
+  <div class="modal-box" style="width: 440px;">
+    <div class="modal-icon">✨</div>
+    <div class="modal-title">Gemini AI Configuration</div>
+    <div class="modal-desc" style="text-align:left;font-size:.84rem;">
+      The chatbot uses <strong>Google Gemini AI</strong> to answer questions outside the MMCOE domain (such as general programming, engineering, math, and knowledge).
+      <br><br>
+      • <strong>Server Key:</strong> Configured in <code>.env</code> as <code>GEMINI_API_KEY</code> on Vercel.
+      <br>
+      • <strong>Custom Client Key (Optional):</strong> Enter your own personal Gemini API key below:
+    </div>
+    <div class="form-group" style="text-align:left;margin-top:12px;">
+      <label class="form-label">Personal Gemini API Key (Optional)</label>
+      <input type="password" class="form-input" id="custom-gemini-key" placeholder="AIzaSy...">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeGeminiModal()">Close</button>
+      <button class="modal-btn confirm" style="background:var(--gold);" onclick="saveGeminiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL (Connected to Database) -->
+<div class="admin-panel" id="admin-panel">
+  <div class="admin-header">
+    <div>
+      <div class="admin-title">&#128101; Registered Users Database</div>
+      <div style="font-size:.72rem;color:var(--text-sub);margin-top:2px;">Live database signups &amp; logins</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="admin-export-btn" onclick="exportUsersCSV()" title="Download CSV">📥 Export CSV</button>
+      <button class="admin-close" onclick="closeAdminPanel()">&#10005;</button>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Users</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-today">0</div><div class="stat-label">Joined Today</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-active">0</div><div class="stat-label">Active Logins</div></div>
+  </div>
+
+  <div class="admin-search">
+    <input type="text" id="admin-search-input" placeholder="Search by name, email, branch..." oninput="filterUsers(this.value)">
+  </div>
+
+  <div class="admin-list" id="admin-list">
+    <div style="text-align:center;padding:30px;color:var(--text-sub);">Loading registered users from database...</div>
+  </div>
+
+  <div class="admin-footer">
+    🔒 Database Connected &bull; Real-time signup records stored on MongoDB Atlas / Vercel
+  </div>
+</div>
+
+<div class="overlay-backdrop" id="backdrop" onclick="closeHistory();closeAdminPanel();closeGeminiModal();"></div>
+
+<!-- CHAT HISTORY PANEL -->
+<div class="history-panel" id="history-panel">
+  <div class="panel-header">
+    <div class="panel-title">&#128336; Chat History</div>
+    <button class="panel-close" onclick="closeHistory()">&#10005;</button>
+  </div>
+  <div class="panel-search">
+    <input type="text" placeholder="Search conversations..." id="history-search" oninput="filterHistory(this.value)">
+  </div>
+  <div class="panel-list" id="panel-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/script.js"></script>
+</body>
+</html>

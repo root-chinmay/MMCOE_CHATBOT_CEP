@@ -1,0 +1,10 @@
+# robots.txt for MMCOE ChatBot
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://mmcoechatbot.vercel.app/sitemap1.xml
+
+# Crawl delay (ignored by Google, used by some bots)
+Crawl-delay: 5

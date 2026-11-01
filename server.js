@@ -43,11 +43,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // Static assets
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname)));
 
 // Root fallback to index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
@@ -58,3 +59,4 @@ app.listen(PORT, () => {
   console.log(`🗄️ Database: ${process.env.MONGODB_URI ? 'MongoDB Atlas ✅' : 'In-Memory fallback (add MONGODB_URI in .env)'}`);
   console.log(`==================================================\n`);
 });
+
